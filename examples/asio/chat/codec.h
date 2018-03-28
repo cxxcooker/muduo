@@ -9,6 +9,7 @@
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 
+// 演示如果仅发送字符串化的消息，如何进行分包与解包
 class LengthHeaderCodec : boost::noncopyable
 {
  public:
@@ -25,6 +26,7 @@ class LengthHeaderCodec : boost::noncopyable
                  muduo::net::Buffer* buf,
                  muduo::Timestamp receiveTime)
   {
+    // onMessage()当收到的数据不足4个字节（用于存储message的长度)或者不足4+消息长度个字节时，onMessage直接返回
     while (buf->readableBytes() >= kHeaderLen) // kHeaderLen == 4
     {
       // FIXME: use Buffer::peekInt32()
@@ -41,7 +43,7 @@ class LengthHeaderCodec : boost::noncopyable
       {
         buf->retrieve(kHeaderLen);
         muduo::string message(buf->peek(), len);
-        messageCallback_(conn, message, receiveTime);
+        messageCallback_(conn, message, receiveTime);  // 同一个包中可能不止一个消息，所以需要预知消息的回调函数
         buf->retrieve(len);
       }
       else

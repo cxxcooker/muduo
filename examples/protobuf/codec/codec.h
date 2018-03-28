@@ -32,6 +32,7 @@ typedef boost::shared_ptr<google::protobuf::Message> MessagePtr;
 //
 // FIXME: merge with RpcCodec
 //
+// 演示当网络传输结构体和对象时，如何序列化、反序列化及分包解包
 class ProtobufCodec : boost::noncopyable
 {
  public:
