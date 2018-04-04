@@ -149,7 +149,7 @@ class TcpConnection : boost::noncopyable,
   size_t highWaterMark_;
   Buffer inputBuffer_;
   Buffer outputBuffer_; // FIXME: use list<Buffer> as output buffer.
-  boost::any context_;
+  boost::any context_;  // 这个 boost::any 是 TcpConnection 的 context，可以用于保存与 connection 绑定的任意数据
   // FIXME: creationTime_, lastReceiveTime_
   //        bytesReceived_, bytesSent_
 };

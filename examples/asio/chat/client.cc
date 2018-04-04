@@ -41,7 +41,7 @@ class ChatClient : boost::noncopyable
 
   void write(const StringPiece& message)
   {
-    MutexLockGuard lock(mutex_);
+    MutexLockGuard lock(mutex_);  // 由 main 线程调用，所以要加锁，这个锁不是为了保护 TcpConnection，而是保护 shared_ptr。
     if (connection_)
     {
       codec_.send(get_pointer(connection_), message);
@@ -55,7 +55,7 @@ class ChatClient : boost::noncopyable
              << conn->peerAddress().toIpPort() << " is "
              << (conn->connected() ? "UP" : "DOWN");
 
-    MutexLockGuard lock(mutex_);
+    MutexLockGuard lock(mutex_);  // onConnection() 会由 EventLoop 线程调用，所以要加锁以保护 shared_ptr。
     if (conn->connected())
     {
       connection_ = conn;
@@ -70,7 +70,7 @@ class ChatClient : boost::noncopyable
                        const string& message,
                        Timestamp)
   {
-    printf("<<< %s\n", message.c_str());
+    printf("<<< %s\n", message.c_str());  // 不用加锁，因为 printf() 是线程安全的。 cout不是线程安全的
   }
 
   TcpClient client_;
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
   LOG_INFO << "pid = " << getpid();
   if (argc > 2)
   {
-    EventLoopThread loopThread;
+    EventLoopThread loopThread;  // 处理网络 IO，是独占线程的
     uint16_t port = static_cast<uint16_t>(atoi(argv[2]));
     InetAddress serverAddr(argv[1], port);
 

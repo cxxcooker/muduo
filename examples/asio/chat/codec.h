@@ -53,6 +53,7 @@ class LengthHeaderCodec : boost::noncopyable
     }
   }
 
+  // 把 const string& message 打包为 muduo::net::Buffer，并通过 conn 发送
   // FIXME: TcpConnectionPtr
   void send(muduo::net::TcpConnection* conn,
             const muduo::StringPiece& message)
@@ -61,7 +62,7 @@ class LengthHeaderCodec : boost::noncopyable
     buf.append(message.data(), message.size());
     int32_t len = static_cast<int32_t>(message.size());
     int32_t be32 = muduo::net::sockets::hostToNetwork32(len);
-    buf.prepend(&be32, sizeof be32);
+    buf.prepend(&be32, sizeof be32);  // Buffer 有一个很好的功能，它在头部预留了 8 个字节的空间
     conn->send(&buf);
   }
 
