@@ -39,7 +39,7 @@ void muduo::net::defaultMessageCallback(const TcpConnectionPtr&,
 
 TcpConnection::TcpConnection(EventLoop* loop,
                              const string& nameArg,
-                             int sockfd,
+                             int sockfd,  // 可以看出TcpConnection自身并不创建实际的Socket连接
                              const InetAddress& localAddr,
                              const InetAddress& peerAddr)
   : loop_(CHECK_NOTNULL(loop)),
@@ -53,16 +53,16 @@ TcpConnection::TcpConnection(EventLoop* loop,
     highWaterMark_(64*1024*1024)
 {
   channel_->setReadCallback(
-      boost::bind(&TcpConnection::handleRead, this, _1));
+      boost::bind(&TcpConnection::handleRead, this, _1));  // 通道可读回调
   channel_->setWriteCallback(
-      boost::bind(&TcpConnection::handleWrite, this));
+      boost::bind(&TcpConnection::handleWrite, this));  // 通道可写回调
   channel_->setCloseCallback(
       boost::bind(&TcpConnection::handleClose, this));
   channel_->setErrorCallback(
       boost::bind(&TcpConnection::handleError, this));
   LOG_DEBUG << "TcpConnection::ctor[" <<  name_ << "] at " << this
             << " fd=" << sockfd;
-  socket_->setKeepAlive(true);
+  socket_->setKeepAlive(true);  // 设置SO_KEEPALIVE选项
 }
 
 TcpConnection::~TcpConnection()
@@ -322,11 +322,13 @@ void TcpConnection::stopReadInLoop()
 
 void TcpConnection::connectEstablished()
 {
-  loop_->assertInLoopThread();
+  loop_->assertInLoopThread();  // 断言处于loop线程
   assert(state_ == kConnecting);
-  setState(kConnected);
-  channel_->tie(shared_from_this());
-  channel_->enableReading();
+  setState(kConnected);  // 将状态设置为已连接
+  channel_->tie(shared_from_this());  // 将自身这个TcpConnection对象提升，由于是智能指针，所以不能直接用this
+  // shared_from_this()之后引用计数+1，为3，但是shared_from_this()是临时对象，析构后又会减一，
+  // 而tie是weak_ptr并不会改变引用计数，所以该函数执行完之后引用计数不会更改
+  channel_->enableReading();  // 一旦连接成功就关注它的可读事件，加入到Poller中关注
 
   connectionCallback_(shared_from_this());
 }

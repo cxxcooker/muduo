@@ -87,11 +87,14 @@ class TcpClient : boost::noncopyable
   ConnectionCallback connectionCallback_;
   MessageCallback messageCallback_;
   WriteCompleteCallback writeCompleteCallback_;
+  // 建立连接成功后又断开是否重连
   bool retry_;   // atomic
   bool connect_; // atomic
   // always in loop thread
-  int nextConnId_;
+  int nextConnId_;  // name_+nextConnid_用于标识一个连接
   mutable MutexLock mutex_;
+  // Connector类不单独使用，它封装在类TcpClient中，一个Connector对应一个TcpClient。
+  // Connector用来建立连接，建立成功后把控制交给TcpConnection
   TcpConnectionPtr connection_; // @GuardedBy mutex_
 };
 

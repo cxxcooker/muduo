@@ -57,7 +57,7 @@ TcpClient::TcpClient(EventLoop* loop,
                      const InetAddress& serverAddr,
                      const string& nameArg)
   : loop_(CHECK_NOTNULL(loop)),
-    connector_(new Connector(loop, serverAddr)),
+    connector_(new Connector(loop, serverAddr)),  // 创建一个Connector，用于实际发起socket连接
     name_(nameArg),
     connectionCallback_(defaultConnectionCallback),
     messageCallback_(defaultMessageCallback),
@@ -102,7 +102,7 @@ TcpClient::~TcpClient()
     loop_->runAfter(1, boost::bind(&detail::removeConnector, connector_));
   }
 }
-
+// 对外提供主动发起连接的接口
 void TcpClient::connect()
 {
   // FIXME: check state
@@ -130,7 +130,7 @@ void TcpClient::stop()
   connect_ = false;
   connector_->stop();
 }
-
+// 实际的socket成功建立后，建立一个TcpConnection对象
 void TcpClient::newConnection(int sockfd)
 {
   loop_->assertInLoopThread();
@@ -147,7 +147,7 @@ void TcpClient::newConnection(int sockfd)
                                           connName,
                                           sockfd,
                                           localAddr,
-                                          peerAddr));
+                                          peerAddr));  // 创建一个TcpConnection对象，智能指针。
 
   conn->setConnectionCallback(connectionCallback_);
   conn->setMessageCallback(messageCallback_);
@@ -156,9 +156,9 @@ void TcpClient::newConnection(int sockfd)
       boost::bind(&TcpClient::removeConnection, this, _1)); // FIXME: unsafe
   {
     MutexLockGuard lock(mutex_);
-    connection_ = conn;
+    connection_ = conn;  // 保存该堆上连接对象的指针，保证函数完成时不被析构
   }
-  conn->connectEstablished();
+  conn->connectEstablished();  // 会关注可读事件，并且回调connectionCallback_
 }
 
 void TcpClient::removeConnection(const TcpConnectionPtr& conn)
@@ -171,13 +171,13 @@ void TcpClient::removeConnection(const TcpConnectionPtr& conn)
     assert(connection_ == conn);
     connection_.reset();
   }
-
+  // I/O线程中销毁
   loop_->queueInLoop(boost::bind(&TcpConnection::connectDestroyed, conn));
   if (retry_ && connect_)
   {
     LOG_INFO << "TcpClient::connect[" << name_ << "] - Reconnecting to "
              << connector_->serverAddress().toIpPort();
-    connector_->restart();
+    connector_->restart();  // 这里的重连是连接成功后断开的重连，所以实际上是重启
   }
 }
 
