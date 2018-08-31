@@ -31,7 +31,7 @@ class EventLoopThreadPool;
 
 ///
 /// TCP server, supports single-threaded and thread-pool models.
-///
+/// 用于编写网络服务器，接受客户的连接。
 /// This is an interface class, so don't expose too much details.
 class TcpServer : boost::noncopyable
 {
@@ -106,7 +106,7 @@ class TcpServer : boost::noncopyable
   const string ipPort_;
   const string name_;
   boost::scoped_ptr<Acceptor> acceptor_; // avoid revealing Acceptor
-  boost::shared_ptr<EventLoopThreadPool> threadPool_;
+  boost::shared_ptr<EventLoopThreadPool> threadPool_;  // 管理线程池和TCPConnection，把 TcpConnection 分派到某个EventLoop 线程上
   ConnectionCallback connectionCallback_;
   MessageCallback messageCallback_;
   WriteCompleteCallback writeCompleteCallback_;

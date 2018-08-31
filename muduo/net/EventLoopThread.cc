@@ -42,13 +42,13 @@ EventLoopThread::~EventLoopThread()
 EventLoop* EventLoopThread::startLoop()
 {
   assert(!thread_.started());
-  thread_.start();
+  thread_.start();  // 启动线程，开始执行threadFunc
 
   {
     MutexLockGuard lock(mutex_);
     while (loop_ == NULL)
     {
-      cond_.wait();
+      cond_.wait();  // 因为这个函数需要返回新线程中EventLoop对象的地址，因此需要使用条件变量来等待线程执行到loop创建
     }
   }
 
@@ -57,7 +57,7 @@ EventLoop* EventLoopThread::startLoop()
 
 void EventLoopThread::threadFunc()
 {
-  EventLoop loop;
+  EventLoop loop;  // 在栈上定义
 
   if (callback_)
   {
@@ -67,7 +67,7 @@ void EventLoopThread::threadFunc()
   {
     MutexLockGuard lock(mutex_);
     loop_ = &loop;
-    cond_.notify();
+    cond_.notify();  // 唤醒startLoop以返回
   }
 
   loop.loop();

@@ -27,7 +27,7 @@ class InetAddress;
 
 ///
 /// Acceptor of incoming TCP connections.
-///
+///  Acceptor 用于接受 TCP 连接，它是 TcpServer 的成员，生命期由后者控制
 class Acceptor : boost::noncopyable
 {
  public:
@@ -47,7 +47,7 @@ class Acceptor : boost::noncopyable
   void handleRead();
 
   EventLoop* loop_;
-  Socket acceptSocket_;
+  Socket acceptSocket_;  // RAII socket Handler，从使用上来说这个socket仅用于监听
   Channel acceptChannel_;
   NewConnectionCallback newConnectionCallback_;
   bool listenning_;

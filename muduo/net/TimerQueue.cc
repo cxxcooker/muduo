@@ -115,14 +115,14 @@ TimerQueue::~TimerQueue()
     delete it->second;
   }
 }
-
+// 供EventLoop实现定时
 TimerId TimerQueue::addTimer(const TimerCallback& cb,
                              Timestamp when,
                              double interval)
 {
   Timer* timer = new Timer(cb, when, interval);
   loop_->runInLoop(
-      boost::bind(&TimerQueue::addTimerInLoop, this, timer));
+      boost::bind(&TimerQueue::addTimerInLoop, this, timer));  // timer必须在IO线程中添加，是非线程安全的
   return TimerId(timer, timer->sequence());
 }
 
@@ -196,21 +196,22 @@ void TimerQueue::handleRead()
   reset(expired, now);
 }
 
+// 关键功能。从timers_中移除到期的timer，并通过vector返回
 std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now)
 {
   assert(timers_.size() == activeTimers_.size());
   std::vector<Entry> expired;
-  Entry sentry(now, reinterpret_cast<Timer*>(UINTPTR_MAX));
+  Entry sentry(now, reinterpret_cast<Timer*>(UINTPTR_MAX));  // 找到set中第一个未过期的哨兵值
   TimerList::iterator end = timers_.lower_bound(sentry);
   assert(end == timers_.end() || now < end->first);
-  std::copy(timers_.begin(), end, back_inserter(expired));
+  std::copy(timers_.begin(), end, back_inserter(expired));  // 复制到新vector中
   timers_.erase(timers_.begin(), end);
 
   for (std::vector<Entry>::iterator it = expired.begin();
       it != expired.end(); ++it)
   {
     ActiveTimer timer(it->second, it->second->sequence());
-    size_t n = activeTimers_.erase(timer);
+    size_t n = activeTimers_.erase(timer);  // 从尚未到期的set中删除
     assert(n == 1); (void)n;
   }
 

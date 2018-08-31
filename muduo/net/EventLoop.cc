@@ -26,6 +26,7 @@ using namespace muduo::net;
 
 namespace
 {
+// __thread类型的变量每一个线程有一份独立实体，各个线程的值互不干扰。
 __thread EventLoop* t_loopInThisThread = 0;
 
 const int kPollTimeMs = 10000;
@@ -76,7 +77,7 @@ EventLoop::EventLoop()
 {
   LOG_DEBUG << "EventLoop created " << this << " in thread " << threadId_;
   if (t_loopInThisThread)
-  {
+  { // one loop per thread:每个线程只能由一个eventloop
     LOG_FATAL << "Another EventLoop " << t_loopInThisThread
               << " exists in this thread " << threadId_;
   }
@@ -103,7 +104,7 @@ EventLoop::~EventLoop()
 void EventLoop::loop()
 {
   assert(!looping_);
-  assertInLoopThread();
+  assertInLoopThread(); // 事件循环必须在IO线程执行
   looping_ = true;
   quit_ = false;  // FIXME: what if someone calls quit() before loop() ?
   LOG_TRACE << "EventLoop " << this << " start looping";
@@ -111,7 +112,7 @@ void EventLoop::loop()
   while (!quit_)
   {
     activeChannels_.clear();
-    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
+    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);  // 获得当前有活动事件的channel列表
     ++iteration_;
     if (Logger::logLevel() <= Logger::TRACE)
     {
@@ -123,7 +124,7 @@ void EventLoop::loop()
         it != activeChannels_.end(); ++it)
     {
       currentActiveChannel_ = *it;
-      currentActiveChannel_->handleEvent(pollReturnTime_);
+      currentActiveChannel_->handleEvent(pollReturnTime_);  // 然后依次调用每个channel的handleEvent函数
     }
     currentActiveChannel_ = NULL;
     eventHandling_ = false;
@@ -286,7 +287,7 @@ void EventLoop::wakeup()
     LOG_ERROR << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
   }
 }
-
+// 当weakupFd_事件触发时，由监听channel回调
 void EventLoop::handleRead()
 {
   uint64_t one = 1;
@@ -296,13 +297,13 @@ void EventLoop::handleRead()
     LOG_ERROR << "EventLoop::handleRead() reads " << n << " bytes instead of 8";
   }
 }
-
+// 只能在loop中调用，而不能在handleRead中调用。因为后者只能被wakeup触发，而在IO线程中添加回调不会触发wakeup
 void EventLoop::doPendingFunctors()
 {
   std::vector<Functor> functors;
   callingPendingFunctors_ = true;
 
-  {
+  {  // 把回调列表swap到局部变量functors中，减小临界区长度，也避免死锁
   MutexLockGuard lock(mutex_);
   functors.swap(pendingFunctors_);
   }

@@ -27,7 +27,7 @@ namespace net
 class InetAddress;
 
 ///
-/// Wrapper of socket file descriptor.
+/// RAII Wrapper of socket file descriptor.
 ///
 /// It closes the sockfd when desctructs.
 /// It's thread safe, all operations are delegated to OS.

@@ -37,7 +37,7 @@ class Socket;
 
 ///
 /// TCP connection, for both client and server usage.
-///
+/// 整个网络库的核心，封装一次 TCP 连接，注意它不能发起连接
 /// This is an interface class, so don't expose too much details.
 class TcpConnection : boost::noncopyable,
                       public boost::enable_shared_from_this<TcpConnection>
@@ -147,14 +147,14 @@ class TcpConnection : boost::noncopyable,
   HighWaterMarkCallback highWaterMarkCallback_;
   CloseCallback closeCallback_;
   size_t highWaterMark_;
-  Buffer inputBuffer_;
+  Buffer inputBuffer_;  // Buffer 的生命期由 TcpConnection 控制
   Buffer outputBuffer_; // FIXME: use list<Buffer> as output buffer.
   boost::any context_;  // 这个 boost::any 是 TcpConnection 的 context，可以用于保存与 connection 绑定的任意数据
   // FIXME: creationTime_, lastReceiveTime_
   //        bytesReceived_, bytesSent_
 };
 
-typedef boost::shared_ptr<TcpConnection> TcpConnectionPtr;
+typedef boost::shared_ptr<TcpConnection> TcpConnectionPtr;  // cpConnection 的生命期依靠 shared_ptr 管理（即用户和库共同控制）
 
 }
 }

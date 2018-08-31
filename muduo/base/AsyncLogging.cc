@@ -29,24 +29,24 @@ AsyncLogging::AsyncLogging(const string& basename,
 void AsyncLogging::append(const char* logline, int len)
 {
   muduo::MutexLockGuard lock(mutex_);
-  if (currentBuffer_->avail() > len)
-  {
+  if (currentBuffer_->avail() > len)  // 大多数情况：buffer未满，直接复制拷贝
+  {  
     currentBuffer_->append(logline, len);
   }
-  else
-  {
+  else  // 将当前buffer加入待写队列，并找到新buffer
+  {  
     buffers_.push_back(currentBuffer_.release());
 
     if (nextBuffer_)
     {
-      currentBuffer_ = boost::ptr_container::move(nextBuffer_);
+      currentBuffer_ = boost::ptr_container::move(nextBuffer_);  // 这里是指针赋值，而不是直接复制
     }
     else
     {
       currentBuffer_.reset(new Buffer); // Rarely happens
     }
     currentBuffer_->append(logline, len);
-    cond_.notify();
+    cond_.notify();  // 唤醒后端开始写日志文件
   }
 }
 
@@ -68,23 +68,23 @@ void AsyncLogging::threadFunc()
     assert(buffersToWrite.empty());
 
     {
-      muduo::MutexLockGuard lock(mutex_);
+      muduo::MutexLockGuard lock(mutex_);  // 仅仅将待写buffer换出，使临界区尽量小
       if (buffers_.empty())  // unusual usage!
       {
         cond_.waitForSeconds(flushInterval_);
       }
-      buffers_.push_back(currentBuffer_.release());
-      currentBuffer_ = boost::ptr_container::move(newBuffer1);
-      buffersToWrite.swap(buffers_);
+      buffers_.push_back(currentBuffer_.release());  // 指针赋值，不实际复制
+      currentBuffer_ = boost::ptr_container::move(newBuffer1);  // 指针赋值，不实际复制
+      buffersToWrite.swap(buffers_);  // 指针赋值，不实际复制
       if (!nextBuffer_)
-      {
-        nextBuffer_ = boost::ptr_container::move(newBuffer2);
+      {  // 在这里申请nextBuffer而不是在生产者中，是为了减少生产者的临界区长度
+        nextBuffer_ = boost::ptr_container::move(newBuffer2);  // 指针赋值，不实际复制
       }
     }
 
     assert(!buffersToWrite.empty());
 
-    if (buffersToWrite.size() > 25)
+    if (buffersToWrite.size() > 25)  // 目前采用简单的直接丢弃多余buffer的方式，防止生产者速度数倍于消费者的问题
     {
       char buf[256];
       snprintf(buf, sizeof buf, "Dropped log messages at %s, %zd larger buffers\n",

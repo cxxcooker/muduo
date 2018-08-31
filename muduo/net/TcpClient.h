@@ -24,6 +24,7 @@ namespace net
 class Connector;
 typedef boost::shared_ptr<Connector> ConnectorPtr;
 
+//  用于编写网络客户端，能发起连接，并且有重试功能
 class TcpClient : boost::noncopyable
 {
  public:

@@ -77,8 +77,8 @@ class TimerQueue : boost::noncopyable
   bool insert(Timer* timer);
 
   EventLoop* loop_;
-  const int timerfd_;
-  Channel timerfdChannel_;
+  const int timerfd_; // TimerQueue 用 timerfd 实现定时，这有别于传统的设置 poll/epoll_wait 的等待时长的办法
+  Channel timerfdChannel_;  // 用于观察timeerfd_上的readable事件
   // Timer list sorted by expiration
   TimerList timers_;
 
