@@ -26,7 +26,7 @@ namespace net
 
 class EventLoop;
 class EventLoopThread;
-
+// 用于创建 IO 线程池
 class EventLoopThreadPool : noncopyable
 {
  public:

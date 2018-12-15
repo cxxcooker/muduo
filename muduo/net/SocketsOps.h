@@ -20,7 +20,8 @@ namespace net
 namespace sockets
 {
 
-///
+/// 封装各种 Sockets 系统调用
+
 /// Creates a non-blocking socket file descriptor,
 /// abort if any error.
 int createNonblockingOrDie(sa_family_t family);

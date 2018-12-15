@@ -25,8 +25,9 @@ namespace net
 class EventLoop;
 
 ///
-/// A selectable I/O channel.
-///
+/// A selectable I/O channel.负责注册与响应 IO 事件
+/// 每个channel对象自始至终只属于一个EventLoop，也只负责一个文件描述符的IO事件分发
+/// 它的所有数据成员也只有一个线程更新，不必加锁  TODO？
 /// This class doesn't own the file descriptor.
 /// The file descriptor could be a socket,
 /// an eventfd, a timerfd, or a signalfd
@@ -84,7 +85,7 @@ class Channel : noncopyable
   static string eventsToString(int fd, int ev);
 
   void update();
-  void handleEventWithGuard(Timestamp receiveTime);
+  void handleEventWithGuard(Timestamp receiveTime);  // 核心功能，根据revents_的值分别调用不同的用户回调
 
   static const int kNoneEvent;
   static const int kReadEvent;
@@ -92,8 +93,8 @@ class Channel : noncopyable
 
   EventLoop* loop_;
   const int  fd_;
-  int        events_;
-  int        revents_; // it's the received event types of epoll or poll
+  int        events_;  // 它关心的IO事件，由用户设置
+  int        revents_; // 目前活动的事件，由EventLoop/Poller设置。it's the received event types of epoll or poll
   int        index_; // used by Poller.
   bool       logHup_;
 

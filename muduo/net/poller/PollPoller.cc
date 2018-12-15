@@ -29,13 +29,13 @@ PollPoller::~PollPoller() = default;
 Timestamp PollPoller::poll(int timeoutMs, ChannelList* activeChannels)
 {
   // XXX pollfds_ shouldn't change
-  int numEvents = ::poll(&*pollfds_.begin(), pollfds_.size(), timeoutMs);
+  int numEvents = ::poll(&*pollfds_.begin(), pollfds_.size(), timeoutMs);  // 获得当前的活动的IO事件
   int savedErrno = errno;
   Timestamp now(Timestamp::now());
   if (numEvents > 0)
   {
     LOG_TRACE << numEvents << " events happened";
-    fillActiveChannels(numEvents, activeChannels);
+    fillActiveChannels(numEvents, activeChannels);  // 填充调用方传入的activeChannels
   }
   else if (numEvents == 0)
   {
@@ -56,9 +56,9 @@ void PollPoller::fillActiveChannels(int numEvents,
                                     ChannelList* activeChannels) const
 {
   for (PollFdList::const_iterator pfd = pollfds_.begin();
-      pfd != pollfds_.end() && numEvents > 0; ++pfd)
+      pfd != pollfds_.end() && numEvents > 0; ++pfd)  // 遍历
   {
-    if (pfd->revents > 0)
+    if (pfd->revents > 0)  // 如果有活动事件
     {
       --numEvents;
       ChannelMap::const_iterator ch = channels_.find(pfd->fd);
@@ -71,7 +71,7 @@ void PollPoller::fillActiveChannels(int numEvents,
     }
   }
 }
-
+// 维护和更新pollfds数组
 void PollPoller::updateChannel(Channel* channel)
 {
   Poller::assertInLoopThread();

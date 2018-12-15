@@ -25,7 +25,7 @@ namespace net
 class Channel;
 
 ///
-/// Base class for IO Multiplexing
+/// Base class for IO Multiplexing.采用“电平触发”的语意
 ///
 /// This class doesn't own the Channel objects.
 class Poller : noncopyable

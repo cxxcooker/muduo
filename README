@@ -28,3 +28,189 @@ To build, run:
  | |  | | |_| | (_| | |_| | (_) |
  |_|  |_|\__,_|\__,_|\__,_|\___/
 
+muduo  主体
+├─base  与网络无关的基础代码，位于muduo命名空间，都是对程序员可见的类
+│  │  AsyncLogging.cc
+│  │  AsyncLogging.h            异步日志backend
+│  │  Atomic.h                  原子操作与原子整数
+│  │  BlockingQueue.h           无界阻塞队列
+│  │  BoundedBlockingQueue.h    有界阻塞队列
+│  │  CMakeLists.txt
+│  │  Condition.cc
+│  │  Condition.h               条件变量，与mutex一起使用
+│  │  copyable.h                一个空基类，用于标识值类型
+│  │  CountDownLatch.cc
+│  │  CountDownLatch.h          倒计时门闩同步
+│  │  CurrentThread.h
+│  │  Date.cc
+│  │  Date.h                    公历日期库
+│  │  Exception.cc
+│  │  Exception.h               带stack trace的异常基类
+│  │  FileUtil.cc
+│  │  FileUtil.h
+│  │  GzipFile.h
+│  │  LogFile.cc
+│  │  LogFile.h
+│  │  Logging.cc
+│  │  Logging.h                 简单的日志，可搭配 AsyncLogging 使用
+│  │  LogStream.cc
+│  │  LogStream.h
+│  │  Mutex.h                   互斥器
+│  │  premake4.lua
+│  │  ProcessInfo.cc
+│  │  ProcessInfo.h             进程信息
+│  │  Singleton.h               线程安全的 singleton
+│  │  StringPiece.h             从 Google 开源代码借用的字符串参数传递类型
+│  │  Thread.cc
+│  │  Thread.h                  线程对象
+│  │  ThreadLocal.h             线程局部数据
+│  │  ThreadLocalSingleton.h    每个线程一个 singleton
+│  │  ThreadPool.cc
+│  │  ThreadPool.h              简单的固定大小线程池
+│  │  Timestamp.cc
+│  │  Timestamp.h               UTC 时间戳
+│  │  TimeZone.cc
+│  │  TimeZone.h                时区与夏令时
+│  │  Types.h                   基本类型的声明，包括 muduo::string
+│  │  WeakCallback.h
+│  │
+│  └─tests
+│          AsyncLogging_test.cc
+│          Atomic_unittest.cc
+│          BlockingQueue_bench.cc
+│          BlockingQueue_test.cc
+│          BoundedBlockingQueue_test.cc
+│          CMakeLists.txt
+│          Date_unittest.cc
+│          Exception_test.cc
+│          FileUtil_test.cc
+│          Fork_test.cc
+│          GzipFile_test.cc
+│          LogFile_test.cc
+│          Logging_test.cc
+│          LogStream_bench.cc
+│          LogStream_test.cc
+│          Mutex_test.cc
+│          ProcessInfo_test.cc
+│          SingletonThreadLocal_test.cc
+│          Singleton_test.cc
+│          ThreadLocalSingleton_test.cc
+│          ThreadLocal_test.cc
+│          ThreadPool_test.cc
+│          Thread_bench.cc
+│          Thread_test.cc
+│          Timestamp_unittest.cc
+│          TimeZone_unittest.cc
+│
+└─net  网络库，位于muduo::net，前置 - 标识程序员不可见的内部类
+    │  Acceptor.cc
+    │  -Acceptor.h               接受器，用于服务端接受连接
+    │  boilerplate.cc
+    │  boilerplate.h
+    │  Buffer.cc
+    │  Buffer.h                  缓冲区，非阻塞 IO 必备
+    │  Callbacks.h
+    │  Channel.cc
+    │  Channel.h                 用于每个 Socket 连接的事件分发
+    │  CMakeLists.txt
+    │  Connector.cc
+    │  -Connector.h              连接器，用于客户端发起连接
+    │  Endian.h                  网络字节序与本机字节序的转换
+    │  EventLoop.cc
+    │  EventLoop.h               事件分发器
+    │  EventLoopThread.cc
+    │  EventLoopThread.h         新建一个专门用于 EventLoop 的线程
+    │  EventLoopThreadPool.cc
+    │  EventLoopThreadPool.h     muduo 默认多线程 IO 模型
+    │  InetAddress.cc
+    │  InetAddress.h             IP 地址的简单封装
+    │  Poller.cc
+    │  -Poller.h                 IO multiplexing 的基类接口
+    │  premake4.lua
+    │  Socket.cc
+    │  -Socket.h                 封装 Sockets 描述符，负责关闭连接
+    │  SocketsOps.cc
+    │  -SocketsOps.h             封装底层的 Sockets API
+    │  TcpClient.cc
+    │  TcpClient.h               TCP 客户端
+    │  TcpConnection.cc
+    │  TcpConnection.h
+    │  TcpServer.cc
+    │  TcpServer.h               TCP 服务端
+    │  Timer.cc
+    │  Timer.h
+    │  TimerId.h
+    │  TimerQueue.cc
+    │  TimerQueue.h
+    │  ZlibStream.h
+    │
+    ├─http  一个简单不完整的可嵌入的http服务器
+    │  │  CMakeLists.txt
+    │  │  HttpContext.cc
+    │  │  HttpContext.h
+    │  │  HttpRequest.h
+    │  │  HttpResponse.cc
+    │  │  HttpResponse.h
+    │  │  HttpServer.cc
+    │  │  HttpServer.h
+    │  │
+    │  └─tests
+    │          HttpRequest_unittest.cc
+    │          HttpServer_test.cc
+    │
+    ├─inspect  基于内嵌http服务器的窥探器，用于报告进程状态。模仿JMX
+    │  │  CMakeLists.txt
+    │  │  Inspector.cc
+    │  │  Inspector.h
+    │  │  PerformanceInspector.cc
+    │  │  PerformanceInspector.h
+    │  │  ProcessInspector.cc
+    │  │  ProcessInspector.h
+    │  │  SystemInspector.cc
+    │  │  SystemInspector.h
+    │  │
+    │  └─tests
+    │          Inspector_test.cc
+    │
+    ├─poller  poll和epoll两种io multiplexing后端的实现
+    │      -DefaultPoller.cc       根据环境变量 MUDUO_USE_POLL 选择后端
+    │      EPollPoller.cc
+    │      -EPollPoller.h          基于 epoll(4) 的 IO multiplexing 后端
+    │      PollPoller.cc
+    │      -PollPoller.h           基于 poll(2) 的 IO multiplexing 后端
+    │
+    ├─protobuf
+    │      BufferStream.h
+    │      CMakeLists.txt
+    │      ProtobufCodecLite.cc
+    │      ProtobufCodecLite.h
+    │
+    ├─protorpc  简单实现Google Protobuf RPC，不建议使用
+    │      CMakeLists.txt
+    │      google-inl.h
+    │      README
+    │      rpc.proto
+    │      RpcChannel.cc
+    │      RpcChannel.h
+    │      RpcCodec.cc
+    │      RpcCodec.h
+    │      RpcCodec_test.cc
+    │      RpcServer.cc
+    │      RpcServer.h
+    │      rpcservice.proto
+    │
+    └─tests
+            Buffer_unittest.cc
+            Channel_test.cc
+            CMakeLists.txt
+            EchoClient_unittest.cc
+            EchoServer_unittest.cc
+            EventLoopThreadPool_unittest.cc
+            EventLoopThread_unittest.cc
+            EventLoop_unittest.cc
+            InetAddress_unittest.cc
+            TcpClient_reg1.cc
+            TcpClient_reg2.cc
+            TcpClient_reg3.cc
+            TimerQueue_unittest.cc
+            ZlibStream_unittest.cc
