@@ -61,7 +61,11 @@ struct ThreadData
              const string& name,
              pid_t* tid,
              CountDownLatch* latch)
+<<<<<<< HEAD
     : func_(std::move(func)),
+=======
+    : func_(func),
+>>>>>>> 873b51a6657c0399b5c34c3af06c2df878e15021
       name_(name),
       tid_(tid),
       latch_(latch)
@@ -144,6 +148,22 @@ Thread::Thread(ThreadFunc func, const string& n)
     joined_(false),
     pthreadId_(0),
     tid_(0),
+<<<<<<< HEAD
+=======
+    func_(func),
+    name_(n),
+    latch_(1)
+{
+  setDefaultName();
+}
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+Thread::Thread(ThreadFunc&& func, const string& n)
+  : started_(false),
+    joined_(false),
+    pthreadId_(0),
+    tid_(0),
+>>>>>>> 873b51a6657c0399b5c34c3af06c2df878e15021
     func_(std::move(func)),
     name_(n),
     latch_(1)

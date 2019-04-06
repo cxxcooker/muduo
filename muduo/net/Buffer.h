@@ -42,8 +42,8 @@ namespace net
 class Buffer : public muduo::copyable
 {
  public:
-  static const size_t kCheapPrepend = 8;
-  static const size_t kInitialSize = 1024;
+  static const size_t kCheapPrepend = 8;  // 定义了 prependable 的初始大小
+  static const size_t kInitialSize = 1024;  // writable 的初始大小
 
   explicit Buffer(size_t initialSize = kInitialSize)
     : buffer_(kCheapPrepend + initialSize),
@@ -115,7 +115,7 @@ class Buffer : public muduo::copyable
     assert(len <= readableBytes());
     if (len < readableBytes())
     {
-      readerIndex_ += len;
+      readerIndex_ += len;  // 读出时，readerIndex后移
     }
     else
     {
@@ -152,7 +152,7 @@ class Buffer : public muduo::copyable
 
   void retrieveAll()
   {
-    readerIndex_ = kCheapPrepend;
+    readerIndex_ = kCheapPrepend;  // 全部数据读完，readIndex 和 writeIndex 返回原位以备新一轮使用
     writerIndex_ = kCheapPrepend;
   }
 
@@ -403,13 +403,13 @@ class Buffer : public muduo::copyable
                 begin()+writerIndex_,
                 begin()+kCheapPrepend);
       readerIndex_ = kCheapPrepend;
-      writerIndex_ = readerIndex_ + readable;
+      writerIndex_ = readerIndex_ + readable;  // 写入时，writeIndex后移
       assert(readable == readableBytes());
     }
   }
 
  private:
-  std::vector<char> buffer_;
+  std::vector<char> buffer_;  // 内部以 vector of char 来保存数据
   size_t readerIndex_;
   size_t writerIndex_;
 

@@ -1,7 +1,7 @@
 add_executable(balancer balancer.cc)
 target_link_libraries(balancer muduo_net)
 
-add_executable(tcprelay tcprelay.cc)
+add_executable(tcprelay tcprelay.cc tunnel.h)
 target_link_libraries(tcprelay muduo_net)
 
 add_executable(socks4a socks4a.cc)

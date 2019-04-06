@@ -33,7 +33,7 @@ class Poller;
 class TimerQueue;
 
 ///
-/// Reactor, at most one per thread.
+/// Reactor, at most one per thread.负责 IO 和定时器事件的分派
 ///
 /// This is an interface class, so don't expose too much details.
 class EventLoop : noncopyable
@@ -146,10 +146,10 @@ class EventLoop : noncopyable
   Timestamp pollReturnTime_;
   std::unique_ptr<Poller> poller_;
   std::unique_ptr<TimerQueue> timerQueue_;
-  int wakeupFd_;
+  int wakeupFd_; // 使用Eventfd而不是pipe，这种方式不需要主动监听，更高效
   // unlike in TimerQueue, which is an internal class,
   // we don't expose Channel to client.
-  std::unique_ptr<Channel> wakeupChannel_;
+  std::unique_ptr<Channel> wakeupChannel_;  // 处理wakeupFd上的读写事件
   boost::any context_;
 
   // scratch variables

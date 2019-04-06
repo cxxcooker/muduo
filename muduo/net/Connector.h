@@ -25,6 +25,7 @@ namespace net
 class Channel;
 class EventLoop;
 
+// muduo库的连接器，负责客户端向服务器发起连接。实际上就是封装了socket的操作
 class Connector : noncopyable,
                   public std::enable_shared_from_this<Connector>
 {
@@ -45,8 +46,8 @@ class Connector : noncopyable,
 
  private:
   enum States { kDisconnected, kConnecting, kConnected };
-  static const int kMaxRetryDelayMs = 30*1000;
-  static const int kInitRetryDelayMs = 500;
+  static const int kMaxRetryDelayMs = 30*1000;  // 默认最大重连时间30000ms
+  static const int kInitRetryDelayMs = 500;  // 默认重连延迟时间500ms
 
   void setState(States s) { state_ = s; }
   void startInLoop();
@@ -59,13 +60,13 @@ class Connector : noncopyable,
   int removeAndResetChannel();
   void resetChannel();
 
-  EventLoop* loop_;
-  InetAddress serverAddr_;
+  EventLoop* loop_;  // 所属的EventLoop
+  InetAddress serverAddr_;  //服务器端的地址
   bool connect_; // atomic
   States state_;  // FIXME: use atomic variable
-  std::unique_ptr<Channel> channel_;
-  NewConnectionCallback newConnectionCallback_;
-  int retryDelayMs_;
+  std::unique_ptr<Channel> channel_;  // Connector所对应的Channel
+  NewConnectionCallback newConnectionCallback_; // 连接成功回调函数
+  int retryDelayMs_;  // 重连延迟时间(单位ms)
 };
 
 }  // namespace net

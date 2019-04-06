@@ -36,13 +36,13 @@ Connector::~Connector()
   LOG_DEBUG << "dtor[" << this << "]";
   assert(!channel_);
 }
-
+// 启动连接线程
 void Connector::start()
 {
   connect_ = true;
   loop_->runInLoop(std::bind(&Connector::startInLoop, this)); // FIXME: unsafe
 }
-
+// 发起连接时判断是否在连接线程
 void Connector::startInLoop()
 {
   loop_->assertInLoopThread();
@@ -74,18 +74,18 @@ void Connector::stopInLoop()
     retry(sockfd);
   }
 }
-
+// 实际发起连接
 void Connector::connect()
 {
-  int sockfd = sockets::createNonblockingOrDie(serverAddr_.family());
-  int ret = sockets::connect(sockfd, serverAddr_.getSockAddr());
+  int sockfd = sockets::createNonblockingOrDie(serverAddr_.family());  // 设置非阻塞，否则退出
+  int ret = sockets::connect(sockfd, serverAddr_.getSockAddr());  // 实际尝试连接
   int savedErrno = (ret == 0) ? 0 : errno;
   switch (savedErrno)
   {
     case 0:
-    case EINPROGRESS:
+    case EINPROGRESS:  // 非阻塞套接字，未连接成功返回码是EINPROGRESS表示正在连接
     case EINTR:
-    case EISCONN:
+    case EISCONN:  // 连接成功
       connecting(sockfd);
       break;
 
@@ -94,7 +94,7 @@ void Connector::connect()
     case EADDRNOTAVAIL:
     case ECONNREFUSED:
     case ENETUNREACH:
-      retry(sockfd);
+      retry(sockfd);  //重连
       break;
 
     case EACCES:
@@ -124,20 +124,21 @@ void Connector::restart()
   connect_ = true;
   startInLoop();
 }
-
+// 如果连接成功
 void Connector::connecting(int sockfd)
 {
   setState(kConnecting);
   assert(!channel_);
-  channel_.reset(new Channel(loop_, sockfd));
+  channel_.reset(new Channel(loop_, sockfd));  // 将Channel与sockfd关联
+  //设置可写回调函数，这时候如果socket没有错误，sockfd就处于可写状态
   channel_->setWriteCallback(
       std::bind(&Connector::handleWrite, this)); // FIXME: unsafe
-  channel_->setErrorCallback(
+  channel_->setErrorCallback(                    //设置错误回调函数
       std::bind(&Connector::handleError, this)); // FIXME: unsafe
 
   // channel_->tie(shared_from_this()); is not working,
   // as channel_ is not managed by shared_ptr
-  channel_->enableWriting();
+  channel_->enableWriting();  // 让Poller关注可写事件
 }
 
 int Connector::removeAndResetChannel()
@@ -161,8 +162,8 @@ void Connector::handleWrite()
 
   if (state_ == kConnecting)
   {
-    int sockfd = removeAndResetChannel();
-    int err = sockets::getSocketError(sockfd);
+    int sockfd = removeAndResetChannel();  // 从poller中移除关注，并将channel置空
+    int err = sockets::getSocketError(sockfd);  // socket可写并不意味着连接一定建立成功，还需要用getsockopt()再次确认一下。
     if (err)
     {
       LOG_WARN << "Connector::handleWrite - SO_ERROR = "
@@ -205,7 +206,7 @@ void Connector::handleError()
     retry(sockfd);
   }
 }
-
+//重连函数，采用back-off策略重连，也就是退避策略。重连时间逐渐延长，0.5s,1s,2s,...一直到30s
 void Connector::retry(int sockfd)
 {
   sockets::close(sockfd);

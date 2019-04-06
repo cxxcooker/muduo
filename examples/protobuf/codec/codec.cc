@@ -24,12 +24,14 @@ void ProtobufCodec::fillEmptyBuffer(Buffer* buf, const google::protobuf::Message
   // buf->retrieveAll();
   assert(buf->readableBytes() == 0);
 
+  // 获取类型名和类型名的长度，然后存放到buffer中
   const std::string& typeName = message.GetTypeName();
   int32_t nameLen = static_cast<int32_t>(typeName.size()+1);
   buf->appendInt32(nameLen);
   buf->append(typeName.c_str(), nameLen);
 
   // code copied from MessageLite::SerializeToArray() and MessageLite::SerializePartialToArray().
+  // 对message的内容进行序列化，并把序列化的内容存放到buffer中
   GOOGLE_DCHECK(message.IsInitialized()) << InitializationErrorMessage("serialize", message);
 
   int byte_size = message.ByteSize();
@@ -43,11 +45,13 @@ void ProtobufCodec::fillEmptyBuffer(Buffer* buf, const google::protobuf::Message
   }
   buf->hasWritten(byte_size);
 
+  // 使用adler32算法对消息数据计算校验值，然后存放到Buffer中
   int32_t checkSum = static_cast<int32_t>(
       ::adler32(1,
                 reinterpret_cast<const Bytef*>(buf->peek()),
                 static_cast<int>(buf->readableBytes())));
   buf->appendInt32(checkSum);
+  // 计算nameLen+name+protobuf data + checkSum占据的长度，然后对计算的数据由本地字节序转换成网络字节序，并存放到整个消息的最前面
   assert(buf->readableBytes() == sizeof nameLen + nameLen + byte_size + sizeof checkSum);
   int32_t len = sockets::hostToNetwork32(static_cast<int32_t>(buf->readableBytes()));
   buf->prepend(&len, sizeof len);
@@ -127,7 +131,8 @@ void ProtobufCodec::onMessage(const TcpConnectionPtr& conn,
     else if (buf->readableBytes() >= implicit_cast<size_t>(len + kHeaderLen))
     {
       ErrorCode errorCode = kNoError;
-      MessagePtr message = parse(buf->peek()+kHeaderLen, len, &errorCode);
+      // 调用parse函数对消息数据进行解析，并对protobuf data反序列化获得google::protobuf::Message对象。
+      MessagePtr message = parse(buf->peek()+kHeaderLen, len, &errorCode);  
       if (errorCode == kNoError && message)
       {
         messageCallback_(conn, message, receiveTime);

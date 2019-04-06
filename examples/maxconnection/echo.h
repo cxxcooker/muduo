@@ -22,7 +22,7 @@ class EchoServer
 
   muduo::net::TcpServer server_;
   int numConnected_; // should be atomic_int
-  const int kMaxConnections_;
+  const int kMaxConnections_;  // 限制服务器能接受的并发连接数，积极地防止耗尽 file descriptor
 };
 
 #endif  // MUDUO_EXAMPLES_MAXCONNECTION_ECHO_H

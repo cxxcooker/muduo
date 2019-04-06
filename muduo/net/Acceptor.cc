@@ -57,14 +57,14 @@ void Acceptor::handleRead()
   loop_->assertInLoopThread();
   InetAddress peerAddr;
   //FIXME loop until no more
-  int connfd = acceptSocket_.accept(&peerAddr);
-  if (connfd >= 0)
+  int connfd = acceptSocket_.accept(&peerAddr);  // 接受连接
+  if (connfd >= 0)  // 这里没有考虑文件描述符耗尽的情况
   {
     // string hostport = peerAddr.toIpPort();
     // LOG_TRACE << "Accepts of " << hostport;
     if (newConnectionCallback_)
     {
-      newConnectionCallback_(connfd, peerAddr);
+      newConnectionCallback_(connfd, peerAddr); // 调用连接回调函数
     }
     else
     {

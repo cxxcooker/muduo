@@ -24,6 +24,7 @@ namespace net
 
 ///
 /// IO Multiplexing with poll(2).
+/// poll 的存在价值是便于调试，因为 poll(2) 调用是上下文无关的，用strace(1) 很容易知道库的行为是否正确
 ///
 class PollPoller : public Poller
 {

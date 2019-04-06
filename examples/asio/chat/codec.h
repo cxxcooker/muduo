@@ -6,6 +6,7 @@
 #include "muduo/net/Endian.h"
 #include "muduo/net/TcpConnection.h"
 
+// 演示如果仅发送字符串化的消息，如何进行分包与解包
 class LengthHeaderCodec : muduo::noncopyable
 {
  public:
@@ -22,6 +23,7 @@ class LengthHeaderCodec : muduo::noncopyable
                  muduo::net::Buffer* buf,
                  muduo::Timestamp receiveTime)
   {
+    // onMessage()当收到的数据不足4个字节（用于存储message的长度)或者不足4+消息长度个字节时，onMessage直接返回
     while (buf->readableBytes() >= kHeaderLen) // kHeaderLen == 4
     {
       // FIXME: use Buffer::peekInt32()
@@ -38,7 +40,7 @@ class LengthHeaderCodec : muduo::noncopyable
       {
         buf->retrieve(kHeaderLen);
         muduo::string message(buf->peek(), len);
-        messageCallback_(conn, message, receiveTime);
+        messageCallback_(conn, message, receiveTime);  // 同一个包中可能不止一个消息，所以需要预知消息的回调函数
         buf->retrieve(len);
       }
       else
@@ -48,6 +50,7 @@ class LengthHeaderCodec : muduo::noncopyable
     }
   }
 
+  // 把 const string& message 打包为 muduo::net::Buffer，并通过 conn 发送
   // FIXME: TcpConnectionPtr
   void send(muduo::net::TcpConnection* conn,
             const muduo::StringPiece& message)
@@ -56,7 +59,7 @@ class LengthHeaderCodec : muduo::noncopyable
     buf.append(message.data(), message.size());
     int32_t len = static_cast<int32_t>(message.size());
     int32_t be32 = muduo::net::sockets::hostToNetwork32(len);
-    buf.prepend(&be32, sizeof be32);
+    buf.prepend(&be32, sizeof be32);  // Buffer 有一个很好的功能，它在头部预留了 8 个字节的空间
     conn->send(&buf);
   }
 
