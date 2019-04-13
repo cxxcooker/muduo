@@ -101,6 +101,7 @@ EventLoop::~EventLoop()
   t_loopInThisThread = NULL;
 }
 
+// eventloopthread线程创建之后立即执行
 void EventLoop::loop()
 {
   assert(!looping_);
@@ -112,7 +113,7 @@ void EventLoop::loop()
   while (!quit_)
   {
     activeChannels_.clear();
-    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);  // 获得当前有活动事件的channel列表
+    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);  // 获得当前有活动事件的channel列表，只在IO线程中调用
     ++iteration_;
     if (Logger::logLevel() <= Logger::TRACE)
     {
@@ -146,6 +147,7 @@ void EventLoop::quit()
   }
 }
 
+// 将函数放到队列中，唤醒事件循环线程并调用
 void EventLoop::runInLoop(Functor cb)
 {
   if (isInLoopThread())
@@ -158,6 +160,7 @@ void EventLoop::runInLoop(Functor cb)
   }
 }
 
+// 排队并唤醒事件循环
 void EventLoop::queueInLoop(Functor cb)
 {
   {
@@ -232,6 +235,9 @@ void EventLoop::abortNotInLoopThread()
             << ", current thread id = " <<  CurrentThread::tid();
 }
 
+// 唤醒事件循环
+// 其他线程往wakeupFd_中写个“1”，EventLoop本身一直在监控wakeupChannel_的读入事件，
+// 所以能使poll() 尽快返回，以便有机会执行刚append进来的Functor
 void EventLoop::wakeup()
 {
   uint64_t one = 1;
@@ -241,7 +247,7 @@ void EventLoop::wakeup()
     LOG_ERROR << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
   }
 }
-// 当weakupFd_事件触发时，由监听channel回调
+// 这里其实什么都不做，其他线程调用wakeup后，通过注册的poller事件唤醒当前事件循环才是目的
 void EventLoop::handleRead()
 {
   uint64_t one = 1;
@@ -251,7 +257,7 @@ void EventLoop::handleRead()
     LOG_ERROR << "EventLoop::handleRead() reads " << n << " bytes instead of 8";
   }
 }
-// 只能在loop中调用，而不能在handleRead中调用。因为后者只能被wakeup触发，而在IO线程中添加回调不会触发wakeup
+// 执行队列中的函数。只能在loop中调用，而不能在handleRead中调用。因为后者只能被wakeup触发，而在IO线程中添加回调不会触发wakeup
 void EventLoop::doPendingFunctors()
 {
   std::vector<Functor> functors;

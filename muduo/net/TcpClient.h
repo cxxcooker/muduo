@@ -31,7 +31,7 @@ class TcpClient : noncopyable
             const InetAddress& serverAddr,
             const string& nameArg);
   ~TcpClient();  // force out-line dtor, for std::unique_ptr members.
-
+  // 对外提供主动发起连接的接口
   void connect();
   void disconnect();
   void stop();

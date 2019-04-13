@@ -44,6 +44,7 @@ Acceptor::~Acceptor()
   ::close(idleFd_);
 }
 
+// 监听连接请求，并通过Channel::enableReading()。把socket的描述符加到poller（I/O复用器）中。
 void Acceptor::listen()
 {
   loop_->assertInLoopThread();
@@ -57,14 +58,14 @@ void Acceptor::handleRead()
   loop_->assertInLoopThread();
   InetAddress peerAddr;
   //FIXME loop until no more
-  int connfd = acceptSocket_.accept(&peerAddr);  // 接受连接
+  int connfd = acceptSocket_.accept(&peerAddr);  // 接受连接请求
   if (connfd >= 0)  // 这里没有考虑文件描述符耗尽的情况
   {
     // string hostport = peerAddr.toIpPort();
     // LOG_TRACE << "Accepts of " << hostport;
     if (newConnectionCallback_)
     {
-      newConnectionCallback_(connfd, peerAddr); // 调用连接回调函数
+      newConnectionCallback_(connfd, peerAddr); // 调用连接回调函数，真正创建连接
     }
     else
     {

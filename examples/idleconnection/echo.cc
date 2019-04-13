@@ -21,7 +21,7 @@ EchoServer::EchoServer(EventLoop* loop,
   server_.setMessageCallback(
       std::bind(&EchoServer::onMessage, this, _1, _2, _3));
   loop->runEvery(1.0, std::bind(&EchoServer::onTimer, this));
-  connectionBuckets_.resize(idleSeconds);
+  connectionBuckets_.resize(idleSeconds);  //  定长时间轮
   dumpConnectionBuckets();
 }
 
@@ -62,11 +62,12 @@ void EchoServer::onMessage(const TcpConnectionPtr& conn,
   conn->send(msg);
 
   assert(!conn->getContext().empty());
-  WeakEntryPtr weakEntry(boost::any_cast<WeakEntryPtr>(conn->getContext()));
-  EntryPtr entry(weakEntry.lock());
+  WeakEntryPtr weakEntry(boost::any_cast<WeakEntryPtr>(
+      conn->getContext()));  // 把Entry的弱引用传给connection 持有。在新消息到来时更新bucket，不持shared_ptr是因为connection不应该增加Entry的引用计数，否则如果connection一直活着，Entry就无法析构
+  EntryPtr entry(weakEntry.lock());  // 将弱引用提升为强引用
   if (entry)
   {
-    connectionBuckets_.back().insert(entry);
+    connectionBuckets_.back().insert(entry);  // 当bucket被挤出队列时，bucket会析构，如果Entry 引用计数为0，就会析构，从而断开connection，所以要用shared_ptr
     dumpConnectionBuckets();
   }
 }

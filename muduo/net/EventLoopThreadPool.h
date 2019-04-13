@@ -26,7 +26,7 @@ namespace net
 
 class EventLoop;
 class EventLoopThread;
-// 用于创建 IO 线程池
+// 管理所有客户端连接的线程池，每个线程都有唯一一个事件循环。可以调用setThreadNum设置线程的数目。
 class EventLoopThreadPool : noncopyable
 {
  public:

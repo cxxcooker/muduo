@@ -28,7 +28,8 @@ class EventLoopThreadPool;
 
 ///
 /// TCP server, supports single-threaded and thread-pool models.
-/// 用于编写网络服务器，接受客户的连接。
+/// 用于编写网络服务器，接受客户端的连接。
+/// 一般运行在主线程，由用户创建和销毁。功能包括监听套接口，创建事件循环线程池，创建并保存新连接TcpConnection，响应事件并调用用户回调函数
 /// This is an interface class, so don't expose too much details.
 class TcpServer : noncopyable
 {

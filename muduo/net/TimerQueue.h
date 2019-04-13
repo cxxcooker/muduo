@@ -31,6 +31,8 @@ class TimerId;
 ///
 /// A best efforts timer queue.
 /// No guarantee that the callback will be on time.
+/// muduo采用了 timerfd_create / timerfd_gettime / timerfd_settime\系统函数来实现定时器的功能。
+/// 很好地复用了Eventloop的框架。定时器超时，timer对应的fd变为可读，TimerQueue就执行符合条件的用户函数。
 ///
 class TimerQueue : noncopyable
 {

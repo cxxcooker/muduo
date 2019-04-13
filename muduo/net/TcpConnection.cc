@@ -148,6 +148,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
     return;
   }
   // if no thing in output queue, try writing directly
+  // 如果当前channel没有写事件发生，或者发送buffer已经清空，则直接发送
   if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
   {
     nwrote = sockets::write(channel_->fd(), data, len);
@@ -156,6 +157,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
       remaining = len - nwrote;
       if (remaining == 0 && writeCompleteCallback_)
       {
+        // 如果发完了，回调“写完成” 函数
         loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
       }
     }
@@ -176,16 +178,20 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
   assert(remaining <= len);
   if (!faultError && remaining > 0)
   {
+    // 看看发送buffer里还有多少数据没发出
     size_t oldLen = outputBuffer_.readableBytes();
     if (oldLen + remaining >= highWaterMark_
         && oldLen < highWaterMark_
         && highWaterMarkCallback_)
     {
+      // 如果总共要发送的数据大于tcp的高水位，则调整一下
       loop_->queueInLoop(std::bind(highWaterMarkCallback_, shared_from_this(), oldLen + remaining));
     }
+    // 把新数据append到发送buffer
     outputBuffer_.append(static_cast<const char*>(data)+nwrote, remaining);
     if (!channel_->isWriting())
     {
+      // 监听channel的可写事件（因为还有数据未发完）
       channel_->enableWriting();
     }
   }
@@ -320,6 +326,7 @@ void TcpConnection::stopReadInLoop()
   }
 }
 
+// tcpserver 一旦建立连接之后立即调用
 void TcpConnection::connectEstablished()
 {
   loop_->assertInLoopThread();  // 断言处于loop线程
@@ -329,7 +336,7 @@ void TcpConnection::connectEstablished()
   // shared_from_this()之后引用计数+1，为3，但是shared_from_this()是临时对象，析构后又会减一，
   // 而tie是weak_ptr并不会改变引用计数，所以该函数执行完之后引用计数不会更改
   channel_->enableReading();  // 一旦连接成功就关注它的可读事件，加入到Poller中关注
-
+  // 至此连接已物理建立，可以开始数据传输
   connectionCallback_(shared_from_this());
 }
 
@@ -346,18 +353,22 @@ void TcpConnection::connectDestroyed()
   channel_->remove();
 }
 
+// 处理可读事件。网络库在处理“socket 可读”事件的时候，必须一次性把 socket
+// 里的数据读完（从操作系统 buffer 搬到应用层 buffer），否则会反复触发 POLLIN
+// 事件，造成 busy-loop.
+// TODO: 一次性读完之后，不需要把fd设置某种状态以通知poller吗
 void TcpConnection::handleRead(Timestamp receiveTime)
 {
   loop_->assertInLoopThread();
   int savedErrno = 0;
-  ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
+  ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);  // 从连接中读取数据
   if (n > 0)
   {
     messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
   }
   else if (n == 0)
   {
-    handleClose();
+    handleClose();  // 如果数据长度为0，说明对端发起了关闭请求（调用了shutdown关闭写）
   }
   else
   {
@@ -377,10 +388,10 @@ void TcpConnection::handleWrite()
                                outputBuffer_.readableBytes());
     if (n > 0)
     {
-      outputBuffer_.retrieve(n);
+      outputBuffer_.retrieve(n);  // 调整发送buffer的内部index，以便下次继续发送
       if (outputBuffer_.readableBytes() == 0)
       {
-        channel_->disableWriting();
+        channel_->disableWriting();  // 如果已经发完，不再关注channel的可写事件
         if (writeCompleteCallback_)
         {
           loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
@@ -407,6 +418,7 @@ void TcpConnection::handleWrite()
   }
 }
 
+// 被动关闭连接
 void TcpConnection::handleClose()
 {
   loop_->assertInLoopThread();

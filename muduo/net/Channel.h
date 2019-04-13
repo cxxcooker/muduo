@@ -26,8 +26,8 @@ class EventLoop;
 
 ///
 /// A selectable I/O channel.负责注册与响应 IO 事件
-/// 每个channel对象自始至终只属于一个EventLoop，也只负责一个文件描述符的IO事件分发
-/// 它的所有数据成员也只有一个线程更新，不必加锁  TODO？
+/// 每个channel对象自始至终只属于一个EventLoop，Channel和文件描述符一一对应
+/// 它的所有数据成员也只有一个线程更新，不必加锁
 /// This class doesn't own the file descriptor.
 /// The file descriptor could be a socket,
 /// an eventfd, a timerfd, or a signalfd
@@ -92,10 +92,10 @@ class Channel : noncopyable
   static const int kWriteEvent;
 
   EventLoop* loop_;
-  const int  fd_;
+  const int fd_;       // 文件描述符，但不负责维护该文件描述符
   int        events_;  // 它关心的IO事件，由用户设置
-  int        revents_; // 目前活动的事件，由EventLoop/Poller设置。it's the received event types of epoll or poll
-  int        index_; // used by Poller.
+  int        revents_; // 目前活动的事件，由EventLoop/Poller设置
+  int index_;          // 被 Poller 所用，用来对channel标号
   bool       logHup_;
 
   std::weak_ptr<void> tie_;

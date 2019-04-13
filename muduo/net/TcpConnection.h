@@ -140,7 +140,7 @@ class TcpConnection : noncopyable,
   std::unique_ptr<Channel> channel_;
   const InetAddress localAddr_;
   const InetAddress peerAddr_;
-  ConnectionCallback connectionCallback_;
+  ConnectionCallback connectionCallback_;  // 连接建立回调
   MessageCallback messageCallback_;
   WriteCompleteCallback writeCompleteCallback_;
   HighWaterMarkCallback highWaterMarkCallback_;

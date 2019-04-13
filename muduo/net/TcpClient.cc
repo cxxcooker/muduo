@@ -100,14 +100,14 @@ TcpClient::~TcpClient()
     loop_->runAfter(1, std::bind(&detail::removeConnector, connector_));
   }
 }
-// 对外提供主动发起连接的接口
+
 void TcpClient::connect()
 {
   // FIXME: check state
   LOG_INFO << "TcpClient::connect[" << name_ << "] - connecting to "
            << connector_->serverAddress().toIpPort();
   connect_ = true;
-  connector_->start();
+  connector_->start();  // 在事件循环中发出建立非阻塞连接的请求
 }
 
 void TcpClient::disconnect()
@@ -169,13 +169,8 @@ void TcpClient::removeConnection(const TcpConnectionPtr& conn)
     assert(connection_ == conn);
     connection_.reset();
   }
-<<<<<<< HEAD
 
   loop_->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
-=======
-  // I/O线程中销毁
-  loop_->queueInLoop(boost::bind(&TcpConnection::connectDestroyed, conn));
->>>>>>> 873b51a6657c0399b5c34c3af06c2df878e15021
   if (retry_ && connect_)
   {
     LOG_INFO << "TcpClient::connect[" << name_ << "] - Reconnecting to "

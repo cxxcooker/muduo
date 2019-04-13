@@ -21,7 +21,7 @@ namespace net
 {
 
 class EventLoop;
-/// IO线程，主要作用就是运行事件循环(loop.loop())，管理EventLoop的生命周期
+/// 事件循环线程，主要作用就是运行事件循环(loop.loop())，管理EventLoop的生命周期
 /// 可以在任何一个线程创建并运行EventLoop，可以按优先级将不同的socket分配给不同的IO线程等
 /// 该类的本意即是使loop和thread一一对应
 class EventLoopThread : noncopyable

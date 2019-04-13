@@ -36,6 +36,7 @@ EventLoopThread::~EventLoopThread()
   }
 }
 
+// 用户或threadpool在创建eventloopthread之后立即调用
 EventLoop* EventLoopThread::startLoop()
 {
   assert(!thread_.started());

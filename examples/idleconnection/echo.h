@@ -43,16 +43,16 @@ class EchoServer
       muduo::net::TcpConnectionPtr conn = weakConn_.lock();
       if (conn)
       {
-        conn->shutdown();
+        conn->shutdown();  // 如果conn还活着，就断开它
       }
     }
 
-    WeakTcpConnectionPtr weakConn_;
+    WeakTcpConnectionPtr weakConn_;  // connection的弱引用。因为Entry析构时要负责断开connection，另外，Entry不应该管理connection的生命周期，所以不用shared_ptr
   };
   typedef std::shared_ptr<Entry> EntryPtr;
   typedef std::weak_ptr<Entry> WeakEntryPtr;
-  typedef std::unordered_set<EntryPtr> Bucket;
-  typedef boost::circular_buffer<Bucket> WeakConnectionList;
+  typedef std::unordered_set<EntryPtr> Bucket;  // 桶
+  typedef boost::circular_buffer<Bucket> WeakConnectionList;  // 队列
 
   muduo::net::TcpServer server_;
   WeakConnectionList connectionBuckets_;

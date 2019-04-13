@@ -53,7 +53,7 @@ struct timespec howMuchTimeFromNow(Timestamp when)
       (microseconds % Timestamp::kMicroSecondsPerSecond) * 1000);
   return ts;
 }
-
+// 其实只是为了读出该timerfd的内容，使poller改变其状态
 void readTimerfd(int timerfd, Timestamp now)
 {
   uint64_t howmany;
@@ -64,7 +64,7 @@ void readTimerfd(int timerfd, Timestamp now)
     LOG_ERROR << "TimerQueue::handleRead() reads " << n << " bytes instead of 8";
   }
 }
-
+// 调整超时时间值
 void resetTimerfd(int timerfd, Timestamp expiration)
 {
   // wake up loop by timerfd_settime()
@@ -72,7 +72,7 @@ void resetTimerfd(int timerfd, Timestamp expiration)
   struct itimerspec oldValue;
   memZero(&newValue, sizeof newValue);
   memZero(&oldValue, sizeof oldValue);
-  newValue.it_value = howMuchTimeFromNow(expiration);
+  newValue.it_value = howMuchTimeFromNow(expiration);  // 设置timeout为新的值
   int ret = ::timerfd_settime(timerfd, 0, &newValue, &oldValue);
   if (ret)
   {
@@ -113,12 +113,12 @@ TimerQueue::~TimerQueue()
   }
 }
 
-// 供EventLoop实现定时
+// 借用EventLoop实现定时
 TimerId TimerQueue::addTimer(const TimerCallback &cb,
                              Timestamp when,
                              double interval)
 {
-  Timer *timer = new Timer(cb, when, interval);
+  Timer* timer = new Timer(cb, when, interval);  // 创建timer
   loop_->runInLoop(
       boost::bind(&TimerQueue::addTimerInLoop, this, timer)); // timer必须在IO线程中添加，是非线程安全的
   return TimerId(timer, timer->sequence());
@@ -135,9 +135,9 @@ void TimerQueue::addTimerInLoop(Timer* timer)
   loop_->assertInLoopThread();
   bool earliestChanged = insert(timer);
 
-  if (earliestChanged)
+  if (earliestChanged)  // 如果刚插入的timer最先到期
   {
-    resetTimerfd(timerfd_, timer->expiration());
+    resetTimerfd(timerfd_, timer->expiration());  // 重置timerfd的过期时间
   }
 }
 
@@ -147,6 +147,7 @@ void TimerQueue::cancelInLoop(TimerId timerId)
   assert(timers_.size() == activeTimers_.size());
   ActiveTimer timer(timerId.timer_, timerId.sequence_);
   ActiveTimerSet::iterator it = activeTimers_.find(timer);
+  // 如果能在list中找到，说明timer的超时函数还没被执行，所以可以安全删除
   if (it != activeTimers_.end())
   {
     size_t n = timers_.erase(Entry(it->first->expiration(), it->first));
@@ -154,6 +155,7 @@ void TimerQueue::cancelInLoop(TimerId timerId)
     delete it->first; // FIXME: no delete please
     activeTimers_.erase(it);
   }
+  // 否则，如果已经在执行超时函数，先把timer放到cancel list中
   else if (callingExpiredTimers_)
   {
     cancelingTimers_.insert(timer);
@@ -161,24 +163,25 @@ void TimerQueue::cancelInLoop(TimerId timerId)
   assert(timers_.size() == activeTimers_.size());
 }
 
+// 当timerfd到期时，变得可写，由poller发现，由事件循环触发该回调
 void TimerQueue::handleRead()
 {
   loop_->assertInLoopThread();
   Timestamp now(Timestamp::now());
-  readTimerfd(timerfd_, now);
+  readTimerfd(timerfd_, now);  // 读取timer fd的内容，否则channel一直为可读状态
 
-  std::vector<Entry> expired = getExpired(now);
+  std::vector<Entry> expired = getExpired(now);  // 获取在now之前的所有timer，并将它们从timer list中移除
 
   callingExpiredTimers_ = true;
   cancelingTimers_.clear();
   // safe to callback outside critical section
   for (const Entry& it : expired)
   {
-    it.second->run();
+    it.second->run();  // 执行用户函数
   }
   callingExpiredTimers_ = false;
 
-  reset(expired, now);
+  reset(expired, now);  // 重置可restart的timers
 }
 
 // 关键功能。从timers_中移除到期的timer，并通过vector返回
@@ -203,6 +206,7 @@ std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now)
   return expired;
 }
 
+// 重启可以重复的timer
 void TimerQueue::reset(const std::vector<Entry>& expired, Timestamp now)
 {
   Timestamp nextExpire;
@@ -223,6 +227,7 @@ void TimerQueue::reset(const std::vector<Entry>& expired, Timestamp now)
     }
   }
 
+  // 重置timerfd的下次过期时间
   if (!timers_.empty())
   {
     nextExpire = timers_.begin()->second->expiration();
@@ -241,16 +246,19 @@ bool TimerQueue::insert(Timer* timer)
   bool earliestChanged = false;
   Timestamp when = timer->expiration();
   TimerList::iterator it = timers_.begin();
+  // timer都是按expiration升序排列的，所以只需要和第一个timer比较
   if (it == timers_.end() || when < it->first)
   {
     earliestChanged = true;
   }
   {
+    // timers_是基于时间戳
     std::pair<TimerList::iterator, bool> result
       = timers_.insert(Entry(when, timer));
     assert(result.second); (void)result;
   }
   {
+    // activeTimers是基于timerid
     std::pair<ActiveTimerSet::iterator, bool> result
       = activeTimers_.insert(ActiveTimer(timer, timer->sequence()));
     assert(result.second); (void)result;

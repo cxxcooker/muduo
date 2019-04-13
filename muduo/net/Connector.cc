@@ -78,14 +78,14 @@ void Connector::stopInLoop()
 void Connector::connect()
 {
   int sockfd = sockets::createNonblockingOrDie(serverAddr_.family());  // 设置非阻塞，否则退出
-  int ret = sockets::connect(sockfd, serverAddr_.getSockAddr());  // 实际尝试连接
+  int ret = sockets::connect(sockfd, serverAddr_.getSockAddr());  // 尝试建立物理连接
   int savedErrno = (ret == 0) ? 0 : errno;
   switch (savedErrno)
   {
     case 0:
     case EINPROGRESS:  // 非阻塞套接字，未连接成功返回码是EINPROGRESS表示正在连接
     case EINTR:
-    case EISCONN:  // 连接成功
+    case EISCONN:  // 如果可以创建
       connecting(sockfd);
       break;
 
@@ -124,7 +124,7 @@ void Connector::restart()
   connect_ = true;
   startInLoop();
 }
-// 如果连接成功
+// 如果可以连接
 void Connector::connecting(int sockfd)
 {
   setState(kConnecting);
@@ -139,6 +139,7 @@ void Connector::connecting(int sockfd)
   // channel_->tie(shared_from_this()); is not working,
   // as channel_ is not managed by shared_ptr
   channel_->enableWriting();  // 让Poller关注可写事件
+  // 此时建立物理连接
 }
 
 int Connector::removeAndResetChannel()
